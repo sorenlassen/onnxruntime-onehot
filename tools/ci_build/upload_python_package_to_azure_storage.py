@@ -40,7 +40,7 @@ def upload_whl(python_wheel_path, final_storage=False):
     else:
         html_blob_name = "onnxruntime_{}.html".format(nightly_build)
 
-    download_path_to_html = "./onnxruntime_{}.html".format(nightly_build)
+    download_path_to_html = "onnxruntime_{}.html".format(nightly_build)
 
     run_subprocess(
         [
