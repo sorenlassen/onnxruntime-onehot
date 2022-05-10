@@ -32,7 +32,7 @@ def run_subprocess(args, cwd=None):
 def upload_whl(python_wheel_path, final_storage=False):
     storage_account_name = "onnxruntimepackages" if final_storage else "onnxruntimepackagesint"
     blob_name = os.path.basename(python_wheel_path)
-    run_subprocess(["azcopy", "cp", python_wheel_path, f"https://{storage_account_name}.blob.core.windows.net/$web/"])
+    run_subprocess(["azcopy", "cp", python_wheel_path, f"https://{storage_account_name}.blob.core.windows.net/$web/", "--recursive"])
 
     nightly_build, local_version = parse_nightly_and_local_version_from_whl_name(blob_name)
     if local_version:
