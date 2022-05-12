@@ -111,6 +111,7 @@ void OneHotWithZeroOffValueImpl(
     size_t count);
 
 SPECIALIZED_OneHotImpl(int64_t, int64_t)
+SPECIALIZED_OneHotImpl(int32_t, int32_t)
 SPECIALIZED_OneHotImpl(int64_t, float)
 SPECIALIZED_OneHotImpl(int32_t, float)
 SPECIALIZED_OneHotImpl(int64_t, half)
@@ -127,6 +128,7 @@ SPECIALIZED_OneHotImpl(int32_t, half)
     size_t count);
 
 SPECIALIZED_OneHotWithZeroOffValueImpl(int64_t, int64_t)
+SPECIALIZED_OneHotWithZeroOffValueImpl(int32_t, int32_t)
 SPECIALIZED_OneHotWithZeroOffValueImpl(int64_t, float)
 SPECIALIZED_OneHotWithZeroOffValueImpl(int32_t, float)
 SPECIALIZED_OneHotWithZeroOffValueImpl(int64_t, half)

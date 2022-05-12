@@ -57,6 +57,7 @@ namespace onnxruntime {
   REG_TYPED_ONE_HOT_OP_V11(in_type##_##out_type##_##depth_type, in_type, out_type, depth_type)
 
 REG_ONE_HOT_OP(int64_t, int64_t, int64_t);
+REG_ONE_HOT_OP(int32_t, int32_t, int32_t);
 REG_ONE_HOT_OP(float, int64_t, int64_t);
 REG_ONE_HOT_OP(int64_t, string, int64_t);
 REG_ONE_HOT_OP(float, string, int64_t);

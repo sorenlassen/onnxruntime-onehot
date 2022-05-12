@@ -25,6 +25,7 @@ namespace cuda {
       OneHotOp<in_type, out_type, depth_type>);
 
 REGISTER_TYPED_ONE_HOT_OP(int64_t, int64_t, int64_t)
+REGISTER_TYPED_ONE_HOT_OP(int32_t, int32_t, int32_t)
 REGISTER_TYPED_ONE_HOT_OP(int64_t, float, int64_t)
 REGISTER_TYPED_ONE_HOT_OP(int32_t, float, int32_t)
 REGISTER_TYPED_ONE_HOT_OP(int64_t, MLFloat16, int64_t)
