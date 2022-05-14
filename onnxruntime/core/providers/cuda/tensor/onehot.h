@@ -30,7 +30,7 @@ void OneHotWithZeroOffValueImpl(
     out_type* output,
     size_t count);
 
-template <typename in_type, typename out_type, typename depth_type>
+template <typename in_type, typename out_type>
 class OneHotOp final : public CudaKernel {
  public:
   explicit OneHotOp(const OpKernelInfo& info) : CudaKernel(info) {

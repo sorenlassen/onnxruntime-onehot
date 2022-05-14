@@ -8,8 +8,22 @@ using namespace onnxruntime::common;
 namespace onnxruntime {
 namespace cuda {
 
+// The types should match the cases in scalar_value_generic() below.
+const DeleteOnUnloadPtr<std::vector<MLDataType>> depthTypeConstraints = new std::vector<MLDataType> {
+    DataTypeImpl::GetTensorType<float>(),
+    DataTypeImpl::GetTensorType<double>(),
+    DataTypeImpl::GetTensorType<int8_t>(),
+    DataTypeImpl::GetTensorType<int16_t>(),
+    DataTypeImpl::GetTensorType<int32_t>(),
+    DataTypeImpl::GetTensorType<int64_t>(),
+    DataTypeImpl::GetTensorType<uint8_t>(),
+    DataTypeImpl::GetTensorType<uint16_t>(),
+    DataTypeImpl::GetTensorType<uint32_t>(),
+    DataTypeImpl::GetTensorType<uint64_t>()
+};
+
 // T1: indices, T2: depth, T3: values
-#define REGISTER_TYPED_ONE_HOT_OP(in_type, out_type, depth_type)           \
+#define REGISTER_TYPED_ONE_HOT_OP(in_type, out_type)                       \
   ONNX_OPERATOR_TYPED_KERNEL_EX(                                           \
       OneHot,                                                              \
       kOnnxDomain,                                                         \
@@ -20,17 +34,52 @@ namespace cuda {
           .InputMemoryType(OrtMemTypeCPUInput, 1) /* Keep depth in CPU */  \
           .InputMemoryType(OrtMemTypeCPUInput, 2) /* Keep values in CPU */ \
           .TypeConstraint("T1", DataTypeImpl::GetTensorType<in_type>())    \
-          .TypeConstraint("T2", DataTypeImpl::GetTensorType<depth_type>()) \
+          .TypeConstraint("T2", *depthTypeConstraints)                     \
           .TypeConstraint("T3", DataTypeImpl::GetTensorType<out_type>()),  \
       OneHotOp<in_type, out_type, depth_type>);
 
-REGISTER_TYPED_ONE_HOT_OP(int64_t, int64_t, int64_t)
-REGISTER_TYPED_ONE_HOT_OP(int64_t, float, int64_t)
-REGISTER_TYPED_ONE_HOT_OP(int32_t, float, int32_t)
-REGISTER_TYPED_ONE_HOT_OP(int64_t, MLFloat16, int64_t)
-REGISTER_TYPED_ONE_HOT_OP(int32_t, MLFloat16, int32_t)
+REGISTER_TYPED_ONE_HOT_OP(int64_t, int64_t)
+REGISTER_TYPED_ONE_HOT_OP(int64_t, float)
+REGISTER_TYPED_ONE_HOT_OP(int32_t, float)
+REGISTER_TYPED_ONE_HOT_OP(int64_t, MLFloat16)
+REGISTER_TYPED_ONE_HOT_OP(int32_t, MLFloat16)
 
-template <typename in_type, typename out_type, typename depth_type>
+template <typename dtype>
+int64_t scalar_value(const Tensor* scalar_tensor) {
+  const auto* data = scalar_tensor->Data<dtype>();
+  return static_cast<int64_t>(*data);
+}
+
+int64_t scalar_value_generic(const Tensor* scalar_tensor) {
+  auto dtype = scalar_tensor->GetElementType();
+  // The cases should match the list of types in depthTypeConstraints.
+  switch (dtype) {
+    case ONNX_NAMESPACE::TensorProto_DataType_FLOAT:
+      return scalar_value<float>(scalar_tensor);
+    case ONNX_NAMESPACE::TensorProto_DataType_DOUBLE:
+      return scalar_value<double>(scalar_tensor);
+    case ONNX_NAMESPACE::TensorProto_DataType_INT8:
+      return scalar_value<int8_t>(scalar_tensor);
+    case ONNX_NAMESPACE::TensorProto_DataType_INT16:
+      return scalar_value<int16_t>(scalar_tensor);
+    case ONNX_NAMESPACE::TensorProto_DataType_INT32:
+      return scalar_value<int32_t>(scalar_tensor);
+    case ONNX_NAMESPACE::TensorProto_DataType_INT64:
+      return scalar_value<int64_t>(scalar_tensor);
+    case ONNX_NAMESPACE::TensorProto_DataType_UINT8:
+      return scalar_value<uint8_t>(scalar_tensor);
+    case ONNX_NAMESPACE::TensorProto_DataType_UINT16:
+      return scalar_value<uint16_t>(scalar_tensor);
+    case ONNX_NAMESPACE::TensorProto_DataType_UINT32:
+      return scalar_value<uint32_t>(scalar_tensor);
+    case ONNX_NAMESPACE::TensorProto_DataType_UINT64:
+      return scalar_value<uint64_t>(scalar_tensor);
+    default:
+      ORT_THROW("Unsupported 'dtype' value: ", dtype);
+  }
+}
+
+template <typename in_type, typename out_type>
 Status OneHotOp<in_type, out_type, depth_type>::ComputeInternal(OpKernelContext* ctx) const {
   typedef typename ToCudaType<out_type>::MappedType CudaT_Out;
 
@@ -40,9 +89,8 @@ Status OneHotOp<in_type, out_type, depth_type>::ComputeInternal(OpKernelContext*
 
   ORT_RETURN_IF_ERROR(ValidateInputs(depth, values));
 
-  const auto* depth_data = depth->Data<depth_type>();
-  const auto depth_val = static_cast<int64_t>(
-      *depth_data);  // As per spec in case 'depth' is of non-integer type, it will be casted to int64 before use.
+  // As per spec in case 'depth' is of non-integer type, it will be casted to int64 before use.
+  const int64_t depth_val = scalar_value_generic(depth);
   if (depth_val <= 0) {
     return Status(ONNXRUNTIME, INVALID_ARGUMENT, "Depth is negative.");
   }
