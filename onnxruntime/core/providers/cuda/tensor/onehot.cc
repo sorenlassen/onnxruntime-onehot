@@ -54,25 +54,25 @@ int64_t scalar_value_generic(const Tensor* scalar_tensor) {
   auto dtype = scalar_tensor->GetElementType();
   // The cases should match the list of types in depthTypeConstraints.
   switch (dtype) {
-    case ONNX_NAMESPACE::TensorProto_DataType_FLOAT:
+    case utils::GetONNXTensorElementDataType<float>():
       return scalar_value<float>(scalar_tensor);
-    case ONNX_NAMESPACE::TensorProto_DataType_DOUBLE:
+    case utils::GetONNXTensorElementDataType<double>():
       return scalar_value<double>(scalar_tensor);
-    case ONNX_NAMESPACE::TensorProto_DataType_INT8:
+    case utils::GetONNXTensorElementDataType<int8_t>():
       return scalar_value<int8_t>(scalar_tensor);
-    case ONNX_NAMESPACE::TensorProto_DataType_INT16:
+    case utils::GetONNXTensorElementDataType<int32_t>():
       return scalar_value<int16_t>(scalar_tensor);
-    case ONNX_NAMESPACE::TensorProto_DataType_INT32:
+    case utils::GetONNXTensorElementDataType<int32_t>():
       return scalar_value<int32_t>(scalar_tensor);
-    case ONNX_NAMESPACE::TensorProto_DataType_INT64:
+    case utils::GetONNXTensorElementDataType<int64_t>():
       return scalar_value<int64_t>(scalar_tensor);
-    case ONNX_NAMESPACE::TensorProto_DataType_UINT8:
+    case utils::GetONNXTensorElementDataType<uint8_t>():
       return scalar_value<uint8_t>(scalar_tensor);
-    case ONNX_NAMESPACE::TensorProto_DataType_UINT16:
+    case utils::GetONNXTensorElementDataType<uint16_t>():
       return scalar_value<uint16_t>(scalar_tensor);
-    case ONNX_NAMESPACE::TensorProto_DataType_UINT32:
+    case utils::GetONNXTensorElementDataType<uint32_t>():
       return scalar_value<uint32_t>(scalar_tensor);
-    case ONNX_NAMESPACE::TensorProto_DataType_UINT64:
+    case utils::GetONNXTensorElementDataType<uint64_t>():
       return scalar_value<uint64_t>(scalar_tensor);
     default:
       ORT_THROW("Unsupported 'dtype' value: ", dtype);
