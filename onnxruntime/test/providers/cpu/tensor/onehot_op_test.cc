@@ -497,6 +497,16 @@ TEST(OneHotOpTest, DimWithZero) {
   test.Run();
 }
 
+TEST(OneHotOpTest, DimWithZero_BeforeAxis) {
+  OpTester test("OneHot", 11);
+  // Axis defaults to -1 (last) when unspecified.
+  test.AddInput<int64_t>("indices", {2, 0}, {});
+  test.AddInput<int64_t>("depth", {1}, {10});
+  test.AddInput<int64_t>("values", {2}, {0, 1});
+  test.AddOutput<int64_t>("output", {2, 0, 10}, {});
+  test.Run();
+}
+
 #ifdef USE_CUDA
 
 TEST(OneHotOpTest, DefaultAxis_int64_MLFloat16_int64 /*indices, output, depth*/) {
@@ -519,8 +529,8 @@ TEST(OneHotOpTest, DefaultAxis_int64_MLFloat16_int64 /*indices, output, depth*/)
   test.AddInput<int64_t>("depth", {1}, {10});
   test.AddInput<MLFloat16>("values", {2}, fp16_values);
   test.AddOutput<MLFloat16>("output", {2, 3, 10}, fp16_output);
-  
-   // exclude CPU Execution Provider as MLFloat16 is not supported in CPU
+
+  // exclude CPU Execution Provider as MLFloat16 is not supported in CPU
   test.Run(OpTester::ExpectResult::kExpectSuccess, "", {kCpuExecutionProvider});
 }
 
@@ -569,8 +579,8 @@ TEST(OneHotOpTest, DefaultAxis_int64_MLFloat16_int64_NonZeroOffValue /*indices, 
   test.AddInput<int64_t>("depth", {1}, {10});
   test.AddInput<MLFloat16>("values", {2}, fp16_values);
   test.AddOutput<MLFloat16>("output", {2, 3, 10}, fp16_output);
-  
-   // exclude CPU Execution Provider as MLFloat16 is not supported in CPU
+
+  // exclude CPU Execution Provider as MLFloat16 is not supported in CPU
   test.Run(OpTester::ExpectResult::kExpectSuccess, "", {kCpuExecutionProvider});
 }
 
