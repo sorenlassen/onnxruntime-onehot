@@ -15,6 +15,10 @@ limitations under the License.
 /* Modifications Copyright (c) Microsoft. */
 
 #include "core/providers/cpu/tensor/onehot.h"
+
+#include <functional>
+#include <numeric>
+
 #include "core/common/eigen_common_wrapper.h"
 #include "core/platform/env.h"
 #include "core/providers/common.h"
@@ -89,7 +93,6 @@ Status PrepareOutputShape(const Tensor* indices, const int64_t depth_val, const 
                           int64_t& prefix_dim_size, int64_t& suffix_dim_size,
                           TensorShapeVector& output_shape) {
   const auto& indices_shape = indices->Shape();
-  const auto indices_dims = indices_shape.GetDims();
   const auto indices_num_dims = indices_shape.NumDimensions();
   output_shape = indices_shape.AsShapeVector();
 
@@ -100,11 +103,11 @@ Status PrepareOutputShape(const Tensor* indices, const int64_t depth_val, const 
 
   output_shape.insert(output_shape.begin() + true_axis, depth_val);
 
-  prefix_dim_size = 1;
-  for (int64_t i = 0; i < true_axis; ++i) {
-    prefix_dim_size *= indices_dims[i];
-  }
-  suffix_dim_size = indices_shape.Size() / prefix_dim_size;
+  auto prod = [](auto begin, auto end) -> int64_t {
+    return std::accumulate(begin, end, 1, std::multiplies<int64_t>());
+  };
+  prefix_dim_size = prod(output_shape.begin(), output_shape.begin() + true_axis);
+  suffix_dim_size = prod(output_shape.begin() + true_axis + 1, output_shape.end());
 
   return Status::OK();
 }
