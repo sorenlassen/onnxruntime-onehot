@@ -17,6 +17,7 @@ limitations under the License.
 #include "core/providers/cpu/tensor/onehot.h"
 
 #include <functional>
+#include <limits>
 #include <numeric>
 
 #include "core/common/eigen_common_wrapper.h"
@@ -162,7 +163,6 @@ Status PrepareOutputShape(const Tensor* indices, const int64_t depth_val, const 
                           int64_t& prefix_dim_size, int64_t& suffix_dim_size,
                           TensorShapeVector& output_shape) {
   const auto& indices_shape = indices->Shape();
-  //const auto indices_dims = indices_shape.GetDims();
   const auto indices_num_dims = indices_shape.NumDimensions();
   output_shape = indices_shape.AsShapeVector();
 
@@ -175,15 +175,6 @@ Status PrepareOutputShape(const Tensor* indices, const int64_t depth_val, const 
 
   prefix_dim_size = prod(output_shape.begin(), output_shape.begin() + true_axis);
   suffix_dim_size = prod(output_shape.begin() + true_axis + 1, output_shape.end());
-
-  //prefix_dim_size = 1;
-  //for (int64_t i = 0; i < true_axis; ++i) {
-  //  prefix_dim_size *= indices_dims[i];
-  //}
-  //if (prefix_dim_size == 0) {
-  //  suffix_dim_size = 0; // output size is 0 so prefix/suffix_dim_size don't matter
-  //}
-  //suffix_dim_size = indices_shape.Size() / prefix_dim_size;
 
   return Status::OK();
 }
@@ -202,20 +193,29 @@ struct DepthDispatchTarget {
   }
 };
 
-// TODO: determine if there's a better tradeoff, int16_t?, between the memory
-// footprint of the adjusted indices and the indices numerical range
+// Type is a choice of memory footprint versus supported numerical range for depth.
+// TODO: consider int16_t or uint16_t if no one uses depth > 2^15 or > 2^16
 typedef int32_t AdjustedIndicesType;
 
+// Depth must be in the numeric range of AdjustedIndicesType to enable
+// adjusting all negative and out-of-range indices.
+constexpr int64_t kMaxDepth = std::numeric_limits<AdjustedIndicesType>::max();
+
+static_assert(double(kMaxDepth) == double(std::numeric_limits<AdjustedIndicesType>::max()),
+              "sanity check that AdjustedIndicesType isn't u64 or floating point");
+
 template <typename in_type>
-int64_t adjust(in_type index, int64_t depth_val) {
+AdjustedIndicesType adjust(in_type index, int64_t depth_val) {
   int64_t i = static_cast<int64_t>(index);
-  if (i < -depth_val || i > depth_val) {
-    return depth_val;
-  } else if (i >= 0) {
-    return i;
-  } else {
-    return i + depth_val;
+  if (i < 0) {
+    i += depth_val;
   }
+  if (i < std::numeric_limits<AdjustedIndicesType>::min() || i > std::numeric_limits<AdjustedIndicesType>::max()) {
+    // When in_type is larger than AdjustedIndicesType avoid that the cast at
+    // the end erroneously returns a value in range [0,depth_val).
+    i = depth_val;
+  }
+  return static_cast<AdjustedIndicesType>(i);
 }
 
 template <typename in_type>
@@ -224,7 +224,7 @@ struct AdjustIndicesDispatchTarget {
                   int64_t depth_val) {
     const auto* indices_data = indices->Data<in_type>();
     for (int64_t i = 0; i < indices_size; ++i) {
-      adjusted_indices.push_back(static_cast<AdjustedIndicesType>(adjust(indices_data[i], depth_val)));
+      adjusted_indices.push_back(adjust(indices_data[i], depth_val));
     }
   }
 };
@@ -299,6 +299,9 @@ Status OneHot::Compute(OpKernelContext* p_op_kernel_context) const {
 
   if (depth_val <= 0) {
     return Status(ONNXRUNTIME, INVALID_ARGUMENT, "Depth is negative.");
+  }
+  if (depth_val > kMaxDepth) {
+    return Status(ONNXRUNTIME, INVALID_ARGUMENT, "Exceeded implementation's max depth " + std::to_string(kMaxDepth));
   }
 
   // prepare output shape
